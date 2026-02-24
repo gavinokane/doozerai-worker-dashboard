@@ -32,7 +32,7 @@ export function ErrorSummary({ errors, isLoading }: ErrorSummaryProps) {
               <AlertCircle size={16} className="shrink-0 text-red-500" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
-                  {err.workflow_short_name}
+                  {err.workflow_short_name ?? 'Unknown'}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   {timeAgo(err.createddate)} &middot;{' '}

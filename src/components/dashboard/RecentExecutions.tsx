@@ -29,16 +29,16 @@ export function RecentExecutions({
       let cmp = 0;
       switch (sortKey) {
         case 'workflow_short_name':
-          cmp = a.workflow_short_name.localeCompare(b.workflow_short_name);
+          cmp = (a.workflow_short_name ?? '').localeCompare(b.workflow_short_name ?? '');
           break;
         case 'status':
-          cmp = a.status.localeCompare(b.status);
+          cmp = (a.status ?? '').localeCompare(b.status ?? '');
           break;
         case 'duration_seconds':
           cmp = (a.duration_seconds ?? 0) - (b.duration_seconds ?? 0);
           break;
         case 'createddate':
-          cmp = a.createddate.localeCompare(b.createddate);
+          cmp = (a.createddate ?? '').localeCompare(b.createddate ?? '');
           break;
       }
       return sortDir === 'asc' ? cmp : -cmp;
@@ -111,7 +111,7 @@ export function RecentExecutions({
                     className="border-b border-gray-100 hover:bg-gray-50 dark:border-gray-700/50 dark:hover:bg-gray-700/30"
                   >
                     <td className="py-3 pr-4 font-medium text-gray-900 dark:text-white">
-                      {inst.workflow_short_name}
+                      {inst.workflow_short_name ?? '-'}
                     </td>
                     <td className="py-3 pr-4">
                       <Badge status={inst.status} />

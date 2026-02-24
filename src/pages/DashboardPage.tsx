@@ -54,7 +54,7 @@ export function DashboardPage() {
     () =>
       instances
         .filter((i) => i.status === 'error')
-        .sort((a, b) => b.createddate.localeCompare(a.createddate)),
+        .sort((a, b) => (b.createddate ?? '').localeCompare(a.createddate ?? '')),
     [instances],
   );
 

@@ -71,6 +71,7 @@ export function computeVolumeData(
   const buckets = new Map<string, VolumeDataPoint>();
 
   for (const instance of instances) {
+    if (!instance.createddate) continue;
     const date = parseISO(instance.createddate);
     const bucketTime = bucketFn(date);
     const key = bucketTime.toISOString();
@@ -115,7 +116,7 @@ export function computeDistributionData(
 ): DistributionDataPoint[] {
   const groups = new Map<string, { count: number; errors: number }>();
   for (const instance of instances) {
-    const name = instance.workflow_short_name;
+    const name = instance.workflow_short_name ?? 'Unknown';
     if (!groups.has(name)) {
       groups.set(name, { count: 0, errors: 0 });
     }
@@ -148,7 +149,8 @@ export function truncateId(id: string, len = 8): string {
   return id.length > len ? id.slice(0, len) + '...' : id;
 }
 
-export function timeAgo(dateStr: string): string {
+export function timeAgo(dateStr: string | null | undefined): string {
+  if (!dateStr) return '-';
   const now = Date.now();
   const then = parseISO(dateStr).getTime();
   const diffMs = now - then;
