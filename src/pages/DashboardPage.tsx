@@ -8,6 +8,7 @@ import { StatusBreakdown } from '../components/dashboard/StatusBreakdown';
 import { WorkflowDistribution } from '../components/dashboard/WorkflowDistribution';
 import { ErrorSummary } from '../components/dashboard/ErrorSummary';
 import { RecentExecutions } from '../components/dashboard/RecentExecutions';
+import { CertificateLookup } from '../components/dashboard/CertificateLookup';
 import { useWorker } from '../api/hooks/useWorker';
 import { useWorkflowReport } from '../api/hooks/useWorkflowReport';
 import {
@@ -104,6 +105,8 @@ export function DashboardPage() {
           data={distributionData}
           isLoading={reportQuery.isLoading}
         />
+
+        <CertificateLookup dateRange={dateRange} />
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="lg:col-span-1">

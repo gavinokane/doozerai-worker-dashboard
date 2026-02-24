@@ -91,3 +91,13 @@ export interface WorkflowCosts {
   completion_tokens: number;
   total_cost: number;
 }
+
+export interface CertificateSubmission {
+  instanceId: string;
+  certificateNumber: string;
+  customerName: string;
+  customerEmail: string;
+  exactAddress: string;
+  status: string;
+  createdDate: string;
+}
