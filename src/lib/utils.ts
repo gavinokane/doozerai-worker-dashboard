@@ -1,6 +1,91 @@
-import { format, startOfHour, startOfDay, parseISO } from 'date-fns';
+import { format, startOfHour, startOfDay, startOfWeek, startOfMonth, subDays, subMinutes, subHours, subMonths, parseISO } from 'date-fns';
 import type { WorkflowReportInstance } from '../api/types';
 import { STATUS_COLORS } from './constants';
+
+/**
+ * Map a user-facing date range to the API date_range value(s) needed to cover
+ * the user's local timezone. The API interprets ranges in UTC, so for
+ * calendar-based ranges we may need to fetch a broader window and filter
+ * client-side.
+ */
+export function getApiDateRange(dateRange: string): string {
+  // Relative ranges (last X) are fine as-is since they're relative to "now"
+  switch (dateRange) {
+    case 'today':
+      // "today" in local tz might start in yesterday UTC
+      return 'last 7 days';
+    case 'yesterday':
+      return 'last 7 days';
+    case 'this week':
+      return 'last 7 days';
+    case 'this month':
+      return 'this month';
+    case 'last month':
+      return 'last month';
+    default:
+      return dateRange;
+  }
+}
+
+/**
+ * Filter instances to match the user's local timezone boundaries for the
+ * selected date range. Returns all instances if no filtering is needed
+ * (e.g., relative ranges like "last hour").
+ */
+export function filterByLocalTimezone(
+  instances: WorkflowReportInstance[],
+  dateRange: string,
+): WorkflowReportInstance[] {
+  const now = new Date();
+  let start: Date | null = null;
+  let end: Date | null = null;
+
+  switch (dateRange) {
+    case 'last 5 minutes':
+      start = subMinutes(now, 5);
+      break;
+    case 'last hour':
+      start = subHours(now, 1);
+      break;
+    case 'last 6 hours':
+      start = subHours(now, 6);
+      break;
+    case 'today':
+      start = startOfDay(now);
+      break;
+    case 'yesterday': {
+      const yesterdayDate = subDays(now, 1);
+      start = startOfDay(yesterdayDate);
+      end = startOfDay(now);
+      break;
+    }
+    case 'last 7 days':
+      start = subDays(now, 7);
+      break;
+    case 'this week':
+      start = startOfWeek(now, { weekStartsOn: 1 });
+      break;
+    case 'this month':
+      start = startOfMonth(now);
+      break;
+    case 'last month': {
+      const lastMonth = subMonths(now, 1);
+      start = startOfMonth(lastMonth);
+      end = startOfMonth(now);
+      break;
+    }
+    default:
+      return instances;
+  }
+
+  return instances.filter((inst) => {
+    if (!inst.createddate) return false;
+    const created = parseISO(inst.createddate);
+    if (start && created < start) return false;
+    if (end && created >= end) return false;
+    return true;
+  });
+}
 
 export interface DashboardMetrics {
   totalExecutions: number;
