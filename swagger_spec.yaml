@@ -1,0 +1,4163 @@
+openapi: 3.0.3
+info:
+  title: Doozer API
+  description: |
+    Doozer AI Workflow & Agent Platform API.
+
+    **Authentication:** All endpoints (except public callbacks and health checks) require two header keys:
+    - `Ocp-Apim-Subscription-Key` — Azure API Management subscription key
+    - `API_KEY` — Tenant-specific API key
+
+    **Warm-up:** Any endpoint accepts `?warmup=true` or header `X-Warmup-Request: true` to keep function instances warm.
+  version: "1.0.0 — Generated 2026-02-17T00:00:00Z"
+  contact:
+    name: Doozer Platform Team
+  x-spec-version: "1.0.0"
+  x-generated-at: "2026-02-17"
+
+servers:
+  - url: https://api.doozerai.com/v3
+    description: Doozer API Gateway
+
+security:
+  - SubscriptionKey: []
+    ApiKey: []
+
+tags:
+  - name: AI & Conversation
+    description: Direct AI query endpoints
+  - name: Workflow
+    description: Workflow definitions, execution, and management
+  - name: Queue
+    description: Async workflow queueing
+  - name: Worker
+    description: AI worker (Doozer) management
+  - name: Tool
+    description: Tool/ability management
+  - name: Integration
+    description: External service integrations (v2)
+  - name: Auth
+    description: OAuth flows and credential management
+  - name: KnowledgeBase
+    description: RAG knowledge base management
+  - name: Extract
+    description: Document text extraction (OCR/PDF)
+  - name: Folder
+    description: Hierarchical folder management
+  - name: Organization
+    description: Organization and tenant management
+  - name: Customer
+    description: Legacy customer management
+  - name: Schedule
+    description: Scheduled workflow execution
+  - name: Storage
+    description: Blob storage SAS URL generation
+  - name: Entity
+    description: Generic entity storage
+  - name: Component
+    description: Component configuration management
+  - name: PromptLib
+    description: Prompt template library
+  - name: PromptLibExt
+    description: Extended collection-based prompt library
+  - name: KeyVault
+    description: Secret management
+  - name: Event Handler
+    description: External event ingestion (e.g. Slack)
+  - name: AgentMemory
+    description: Scoped agent memory management with Cosmos DB persistence, cascade recall, versioning, and Key Vault secret support
+  - name: Monitoring
+    description: Health checks and utilities
+
+paths:
+  # ──────────────────────────────────────────────
+  # AI & Conversation
+  # ──────────────────────────────────────────────
+
+  /AskDoozer:
+    post:
+      tags: [AI & Conversation]
+      summary: Ask a Doozer agent a question
+      description: |
+        Primary conversational AI endpoint. Sends a query to a configured AI worker (Doozer)
+        and returns the response. Supports tool use, knowledge base RAG, and integrations.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AskDoozerRequest'
+      responses:
+        '200':
+          description: AI response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AskDoozerResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /AskAI:
+    post:
+      tags: [AI & Conversation]
+      summary: Direct LLM call
+      description: Make a direct LLM call without worker context.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+                system_prompt:
+                  type: string
+                model:
+                  type: string
+                  default: gpt-doozer-o
+                max_tokens:
+                  type: integer
+                temperature:
+                  type: number
+      responses:
+        '200':
+          description: LLM response
+          content:
+            application/json:
+              schema:
+                type: object
+    get:
+      tags: [AI & Conversation]
+      summary: Direct LLM call (GET)
+      parameters:
+        - name: warmup
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Response or warmup acknowledgement
+
+  /AskAIStream:
+    post:
+      tags: [AI & Conversation]
+      summary: Streaming LLM call
+      description: Direct LLM call with Server-Sent Events streaming response.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+                system_prompt:
+                  type: string
+                model:
+                  type: string
+                max_tokens:
+                  type: integer
+      responses:
+        '200':
+          description: SSE stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  /OpenAI:
+    post:
+      tags: [AI & Conversation]
+      summary: OpenAI-compatible passthrough
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: OpenAI-format response
+
+  /MakeRequest:
+    post:
+      tags: [AI & Conversation]
+      summary: Proxy HTTP request
+      description: Makes an HTTP request on behalf of the caller. Synchronous.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+                method:
+                  type: string
+                  enum: [GET, POST, PUT, DELETE, PATCH]
+                headers:
+                  type: object
+                body:
+                  type: object
+      responses:
+        '200':
+          description: Proxied response
+
+  /MakeRequestAsync:
+    post:
+      tags: [AI & Conversation]
+      summary: Proxy HTTP request (async)
+      description: Makes an HTTP request asynchronously. Returns immediately.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+                method:
+                  type: string
+                headers:
+                  type: object
+                body:
+                  type: object
+      responses:
+        '200':
+          description: Accepted
+
+  /CreateImage:
+    post:
+      tags: [AI & Conversation]
+      summary: Generate image via AI
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                prompt:
+                  type: string
+                size:
+                  type: string
+                model:
+                  type: string
+      responses:
+        '200':
+          description: Generated image URL
+
+  /GenerateImage:
+    post:
+      tags: [AI & Conversation]
+      summary: Generate image (alternate endpoint)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                prompt:
+                  type: string
+      responses:
+        '200':
+          description: Generated image
+
+  /ExecutePython:
+    post:
+      tags: [AI & Conversation]
+      summary: Execute Python code
+      description: Runs Python code in a sandboxed environment.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                variables:
+                  type: object
+      responses:
+        '200':
+          description: Execution result
+
+  # ──────────────────────────────────────────────
+  # Workflow
+  # ──────────────────────────────────────────────
+
+  /workflow/master:
+    get:
+      tags: [Workflow]
+      summary: Get workflow definition(s)
+      parameters:
+        - name: workflow_short_name
+          in: query
+          schema:
+            type: string
+        - name: version
+          in: query
+          schema:
+            type: integer
+        - name: available_as_a_tool
+          in: query
+          schema:
+            type: boolean
+        - name: worker_id
+          in: query
+          schema:
+            type: string
+        - name: include_variables
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Workflow master document(s)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowMaster'
+    post:
+      tags: [Workflow]
+      summary: Create workflow definition
+      parameters:
+        - name: folder_id
+          in: query
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowMaster'
+      responses:
+        '200':
+          description: Created workflow
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+    put:
+      tags: [Workflow]
+      summary: Upsert workflow definition
+      parameters:
+        - name: folder_id
+          in: query
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowMaster'
+      responses:
+        '200':
+          description: Upserted workflow
+    delete:
+      tags: [Workflow]
+      summary: Delete workflow definition
+      parameters:
+        - name: instance_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+
+  /workflow/copy:
+    post:
+      tags: [Workflow]
+      summary: Copy a workflow to a target tenant
+      description: >
+        Creates a deep copy of a workflow with a new identity. The copied workflow
+        gets a fresh base_guid, version reset to 1, and the worker_id set to the
+        target_worker_id. An audit trail (cloned_from) tracks the source workflow.
+        If folder_id is omitted the workflow is placed in the default PROCESS folder.
+      operationId: copyWorkflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - source_short_name
+                - target_worker_id
+              properties:
+                source_short_name:
+                  type: string
+                  description: Short name of the source workflow to copy
+                  example: "sample_workflow"
+                target_worker_id:
+                  type: integer
+                  format: int32
+                  description: Worker ID in the target tenant
+                  example: 1
+                folder_id:
+                  type: integer
+                  format: int32
+                  description: Target folder ID. If omitted, workflow is assigned to the default PROCESS folder
+                  example: 5
+      responses:
+        '201':
+          description: Workflow successfully copied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  short_name:
+                    type: string
+                    description: Short name of the copied workflow
+                    example: "sample_workflow"
+        '400':
+          description: Missing required fields or no tenant context
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Missing required fields: source_short_name, target_worker_id"
+        '405':
+          description: Method not allowed - only POST is supported
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Only POST method is supported for copy"
+        '500':
+          description: Internal server error during copy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Failed to copy workflow 'sample_workflow'"
+      security:
+        - api_key: []
+
+  /workflow/instance:
+    get:
+      tags: [Workflow]
+      summary: Get workflow instance state
+      parameters:
+        - name: instance_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Workflow instance document
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowInstance'
+    post:
+      tags: [Workflow]
+      summary: Execute a workflow
+      description: |
+        Creates and runs a workflow instance. Supports on-the-fly workflow definitions,
+        restarts, reference instances, and idempotency keys.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          description: Prevents duplicate execution if the same key is submitted again
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowInstanceRequest'
+      responses:
+        '200':
+          description: Workflow execution result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowInstance'
+        '409':
+          description: Duplicate request (idempotency key already used)
+    put:
+      tags: [Workflow]
+      summary: Update a running workflow instance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Updated instance
+    delete:
+      tags: [Workflow]
+      summary: Delete a workflow instance
+      parameters:
+        - name: instance_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+
+  /workflow/instance/{instance_id}/context:
+    get:
+      tags: [Workflow]
+      summary: Get execution context for instance
+      parameters:
+        - name: instance_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Execution context with data dictionary and step history
+
+  /workflow/list:
+    get:
+      tags: [Workflow]
+      summary: List workflow definitions
+      parameters:
+        - name: include_variables
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: available_as_a_tool
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: include_folder_structure
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: worker_id
+          in: query
+          schema:
+            type: string
+        - name: folder_id
+          in: query
+          schema:
+            type: integer
+        - name: all_versions
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: List of workflow master documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkflowMaster'
+
+  /workflow/restart:
+    post:
+      tags: [Workflow]
+      summary: Restart a paused or failed workflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [instance_id, restart_type]
+              properties:
+                instance_id:
+                  type: string
+                restart_type:
+                  type: string
+                  description: Type of restart operation
+                restart_step_id:
+                  type: string
+                output_variable:
+                  type: string
+                output:
+                  type: string
+                doozer_name:
+                  type: string
+      responses:
+        '200':
+          description: Restarted workflow instance
+
+  /workflow/report:
+    get:
+      tags: [Workflow]
+      summary: Generate workflow analytics report
+      parameters:
+        - name: report_type
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: date_range
+          in: query
+          schema:
+            type: string
+        - name: custom_from
+          in: query
+          schema:
+            type: string
+        - name: custom_to
+          in: query
+          schema:
+            type: string
+        - name: workflow_short_name
+          in: query
+          schema:
+            type: string
+        - name: doozer_name
+          in: query
+          schema:
+            type: string
+        - name: fields
+          in: query
+          description: Comma-separated field list
+          schema:
+            type: string
+        - name: instance_id
+          in: query
+          schema:
+            type: string
+        - name: top_n
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Report data
+
+  /workflow/variables:
+    get:
+      tags: [Workflow]
+      summary: Query workflow instance variables
+      parameters:
+        - name: filter_name
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: filter_value
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: return_variables
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: search_variable
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: search_value
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: results_type
+          in: query
+          schema:
+            type: string
+            enum: [all, latest, top_n]
+            default: all
+        - name: top_n
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Matching variable data
+
+  # ──────────────────────────────────────────────
+  # Queue
+  # ──────────────────────────────────────────────
+
+  /Queue:
+    post:
+      tags: [Queue]
+      summary: Queue a workflow for async execution
+      description: |
+        Validates the request, handles large payloads (>60KB stored in blob),
+        supports scheduled execution via visibility timeout, and sends to Azure Queue Storage.
+      parameters:
+        - name: callback_url
+          in: query
+          description: URL to receive status callbacks on workflow progress
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueueRequest'
+      responses:
+        '200':
+          description: Queued successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /workflowasync/instance:
+    post:
+      tags: [Queue]
+      summary: Execute workflow asynchronously (fire-and-forget)
+      description: |
+        Starts a workflow and returns immediately without waiting for completion.
+        Uses an alternate key header (`altkey`) in addition to the standard subscription key.
+      parameters:
+        - name: altkey
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [workflow_short_name]
+              properties:
+                workflow_short_name:
+                  type: string
+                query:
+                  type: string
+                variables:
+                  type: object
+      responses:
+        '200':
+          description: Workflow started
+
+  /WorkflowQWarmup:
+    get:
+      tags: [Queue]
+      summary: Warm up the workflow queue processor
+      responses:
+        '200':
+          description: Warmup acknowledged
+
+  # ──────────────────────────────────────────────
+  # Worker
+  # ──────────────────────────────────────────────
+
+  /worker:
+    get:
+      tags: [Worker]
+      summary: List all workers
+      parameters:
+        - name: view_type
+          in: query
+          schema:
+            type: string
+            enum: [full, lite]
+            default: full
+        - name: folders
+          in: query
+          description: Include folder structure
+          schema:
+            type: boolean
+            default: false
+        - name: folder_id
+          in: query
+          schema:
+            type: integer
+        - name: hire_status
+          in: query
+          description: Comma-separated status filter
+          schema:
+            type: string
+            default: HIRED
+      responses:
+        '200':
+          description: List of workers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Worker'
+    post:
+      tags: [Worker]
+      summary: Create a new worker
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Name:
+                  type: string
+                SystemPrompt:
+                  type: string
+                Model:
+                  type: string
+                Provider:
+                  type: string
+                manifest_id:
+                  type: string
+                  description: Create from a manifest template
+                folder_id:
+                  type: integer
+      responses:
+        '200':
+          description: Created worker
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Worker'
+
+  /worker/{worker_id}:
+    get:
+      tags: [Worker]
+      summary: Get a specific worker
+      parameters:
+        - name: worker_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: view_type
+          in: query
+          schema:
+            type: string
+            enum: [full, lite]
+            default: full
+      responses:
+        '200':
+          description: Worker details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Worker'
+    put:
+      tags: [Worker]
+      summary: Update a worker
+      parameters:
+        - name: worker_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Updated worker
+    delete:
+      tags: [Worker]
+      summary: Delete a worker
+      parameters:
+        - name: worker_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: force
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Deleted
+
+  /worker/{worker_id}/tool/{tool_id}:
+    post:
+      tags: [Worker]
+      summary: Assign a tool to a worker
+      parameters:
+        - name: worker_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: tool_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tool assigned
+    delete:
+      tags: [Worker]
+      summary: Remove a tool from a worker
+      parameters:
+        - name: worker_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: tool_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tool removed
+
+  /worker/manifest:
+    get:
+      tags: [Worker]
+      summary: Get worker manifests (templates)
+      parameters:
+        - name: manifest_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Manifests
+    post:
+      tags: [Worker]
+      summary: Create a worker manifest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Created manifest
+
+  # ──────────────────────────────────────────────
+  # Tool
+  # ──────────────────────────────────────────────
+
+  /Tool:
+    get:
+      tags: [Tool]
+      summary: List or get tools
+      parameters:
+        - name: tool_name
+          in: query
+          schema:
+            type: string
+        - name: id
+          in: query
+          schema:
+            type: string
+        - name: version
+          in: query
+          schema:
+            type: integer
+        - name: view_type
+          in: query
+          schema:
+            type: string
+            enum: [full, lite]
+            default: full
+        - name: folders
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: folder_id
+          in: query
+          schema:
+            type: integer
+        - name: all_versions
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: integration_config
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: integration_connection_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tool(s)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tool'
+    put:
+      tags: [Tool]
+      summary: Create or update a tool (upsert)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Tool'
+      responses:
+        '200':
+          description: Upserted tool
+    delete:
+      tags: [Tool]
+      summary: Delete a tool
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id:
+                  type: string
+                version:
+                  type: integer
+                delete_all_versions:
+                  type: boolean
+                  default: false
+      responses:
+        '200':
+          description: Deleted
+
+  /Tool/clone:
+    post:
+      tags: [Tool]
+      summary: Clone an existing tool
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tool_id]
+              properties:
+                tool_id:
+                  type: string
+      responses:
+        '200':
+          description: Cloned tool
+
+  /Tool/execute:
+    post:
+      tags: [Tool]
+      summary: Execute a tool directly
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [doozer_name, variables]
+              properties:
+                doozer_name:
+                  type: string
+                variables:
+                  type: object
+                callback_url:
+                  type: string
+                system_prompt:
+                  type: string
+                query:
+                  type: string
+      responses:
+        '200':
+          description: Execution result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  output:
+                    type: string
+                  workflow_instance_id:
+                    type: string
+
+  # ──────────────────────────────────────────────
+  # IntegrationV2
+  # ──────────────────────────────────────────────
+
+  /IntegrationV2:
+    get:
+      tags: [Integration]
+      summary: Get integration resources
+      description: |
+        Query providers, templates, connections, or connection methods.
+        The `resource` parameter determines which type of integration resource to return.
+      parameters:
+        - name: resource
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [provider, template, connection, connection_methods, template_methods]
+        - name: provider_key
+          in: query
+          description: Filter by provider (for provider, template, template_methods)
+          schema:
+            type: string
+        - name: id
+          in: query
+          description: Resource ID (for template, connection, connection_methods)
+          schema:
+            type: string
+        - name: path
+          in: query
+          description: Dot-path selection for template fields
+          schema:
+            type: string
+        - name: fields
+          in: query
+          description: Comma-separated field list for templates
+          schema:
+            type: string
+        - name: include_provider_details
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: mode
+          in: query
+          description: Detail level for connection_methods/template_methods
+          schema:
+            type: string
+            enum: [lite, full]
+            default: lite
+        - name: service_key
+          in: query
+          description: Service key for template_methods
+          schema:
+            type: string
+        - name: template_id
+          in: query
+          description: Template ID for template_methods
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Integration resource data
+    post:
+      tags: [Integration]
+      summary: Create integration resource or resolve endpoint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resource]
+              properties:
+                resource:
+                  type: string
+                  enum: [connection, resolve_integration_endpoint, get_integration_oauth_headers, provider, template]
+                provider_key:
+                  type: string
+                integration_template_id:
+                  type: string
+                connection_name:
+                  type: string
+                security_scheme_key:
+                  type: string
+                requested_scopes:
+                  type: array
+                  items:
+                    type: string
+                quick_setup_id:
+                  type: string
+                custom_credentials:
+                  type: object
+                integration_connection_id:
+                  type: integer
+                  description: Required for resolve_integration_endpoint and get_integration_oauth_headers
+                method_id:
+                  type: string
+                params:
+                  type: string
+      responses:
+        '200':
+          description: Created resource or resolved endpoint
+    put:
+      tags: [Integration]
+      summary: Update integration resource
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resource]
+              properties:
+                resource:
+                  type: string
+                  enum: [connection, provider, template]
+                id:
+                  type: string
+                updates:
+                  type: object
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags: [Integration]
+      summary: Delete integration resource
+      parameters:
+        - name: resource
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [connection, provider, template]
+        - name: id
+          in: query
+          schema:
+            type: string
+        - name: provider_key
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+
+  /Integration:
+    get:
+      tags: [Integration]
+      summary: Legacy integration endpoint (v1)
+      responses:
+        '200':
+          description: Integration data
+    post:
+      tags: [Integration]
+      summary: Legacy integration create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Created
+
+  # ──────────────────────────────────────────────
+  # Auth
+  # ──────────────────────────────────────────────
+
+  /auth/providers:
+    get:
+      tags: [Auth]
+      summary: List available auth providers
+      responses:
+        '200':
+          description: Auth providers
+    post:
+      tags: [Auth]
+      summary: Register a new auth provider
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                provider_key:
+                  type: string
+                provider_name:
+                  type: string
+                authentication_type:
+                  type: string
+                configuration:
+                  type: object
+      responses:
+        '200':
+          description: Registered
+
+  /auth/credentials:
+    get:
+      tags: [Auth]
+      summary: Get tenant credentials
+      parameters:
+        - name: integration_connection_id
+          in: query
+          schema:
+            type: integer
+        - name: provider_key
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Credentials list
+
+  /auth/credentials/{id}:
+    get:
+      tags: [Auth]
+      summary: Get specific credential
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Credential details
+    delete:
+      tags: [Auth]
+      summary: Revoke and delete credential
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+
+  /auth/credentials/{id}/token:
+    get:
+      tags: [Auth]
+      summary: Get a valid access token
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Access token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      access_token:
+                        type: string
+                      token_type:
+                        type: string
+                      expires_at:
+                        type: string
+
+  /auth/initiate:
+    post:
+      tags: [Auth]
+      summary: Start an OAuth flow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                provider_key:
+                  type: string
+                integration_connection_id:
+                  type: integer
+                requested_scopes:
+                  type: array
+                  items:
+                    type: string
+                redirect_uri:
+                  type: string
+      responses:
+        '200':
+          description: Authorization URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      authorization_url:
+                        type: string
+                      session_id:
+                        type: string
+
+  /auth/callback:
+    get:
+      tags: [Auth]
+      summary: OAuth callback handler (public)
+      description: Receives the OAuth redirect from the identity provider. No API keys required.
+      security: []
+      parameters:
+        - name: code
+          in: query
+          schema:
+            type: string
+        - name: state
+          in: query
+          schema:
+            type: string
+        - name: error
+          in: query
+          schema:
+            type: string
+        - name: error_description
+          in: query
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to UI
+
+  /auth/api-key:
+    post:
+      tags: [Auth]
+      summary: Store API key credentials
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                provider_key:
+                  type: string
+                integration_connection_id:
+                  type: integer
+                api_key:
+                  type: string
+                additional_headers:
+                  type: object
+                additional_context:
+                  type: object
+      responses:
+        '200':
+          description: Stored
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh OAuth tokens
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                integration_connection_id:
+                  type: integer
+      responses:
+        '200':
+          description: Refreshed
+
+  /auth/clientcredentials:
+    post:
+      tags: [Auth]
+      summary: Client credentials OAuth flow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                provider_key:
+                  type: string
+                integration_connection_id:
+                  type: integer
+                requested_scopes:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Token response
+
+  /auth/status:
+    get:
+      tags: [Auth]
+      summary: Get credentials status overview
+      responses:
+        '200':
+          description: Status summary
+
+  /auth/health:
+    get:
+      tags: [Auth]
+      summary: Auth health check (public)
+      security: []
+      responses:
+        '200':
+          description: Healthy
+
+  # ──────────────────────────────────────────────
+  # KnowledgeBase
+  # ──────────────────────────────────────────────
+
+  /KnowledgeBase:
+    get:
+      tags: [KnowledgeBase]
+      summary: List knowledge bases
+      parameters:
+        - name: folders
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Knowledge bases list
+    post:
+      tags: [KnowledgeBase]
+      summary: Query a knowledge base (RAG)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query, knowledge_code]
+              properties:
+                query:
+                  type: string
+                knowledge_code:
+                  type: string
+                system_prompt:
+                  type: string
+                output_tokens:
+                  type: integer
+                  default: 500
+                ksimilarity:
+                  type: integer
+                  default: 3
+                temperature:
+                  type: number
+                  default: 0
+                model:
+                  type: string
+      responses:
+        '200':
+          description: RAG response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+                  sources:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        document:
+                          type: string
+                        relevance:
+                          type: number
+    put:
+      tags: [KnowledgeBase]
+      summary: Create a new knowledge base
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Created
+    delete:
+      tags: [KnowledgeBase]
+      summary: Delete a knowledge base
+      responses:
+        '200':
+          description: Deleted
+
+  # ──────────────────────────────────────────────
+  # Knowledge Base Index Management
+  # ──────────────────────────────────────────────
+
+  /AISearch:
+    post:
+      tags: [KnowledgeBase]
+      summary: Search an AI index
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Search results
+
+  /CreateNewIndex:
+    post:
+      tags: [KnowledgeBase]
+      summary: Create a new search index
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Index created
+
+  /DeleteIndex:
+    post:
+      tags: [KnowledgeBase]
+      summary: Delete a search index
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Index deleted
+
+  /GetIndexInfo:
+    get:
+      tags: [KnowledgeBase]
+      summary: Get index information
+      responses:
+        '200':
+          description: Index info
+
+  /GetIndexList:
+    get:
+      tags: [KnowledgeBase]
+      summary: List all indexes
+      responses:
+        '200':
+          description: Index list
+
+  /AddInformationToIndex:
+    post:
+      tags: [KnowledgeBase]
+      summary: Add content to an index
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Content added
+
+  /AddPDFToIndex:
+    post:
+      tags: [KnowledgeBase]
+      summary: Add a PDF document to an index
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: PDF added
+
+  /searchindex:
+    post:
+      tags: [KnowledgeBase]
+      summary: Search within an index
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Search results
+
+  /StoreWebSite:
+    post:
+      tags: [KnowledgeBase]
+      summary: Store website content in an index
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Website stored
+
+  /StoreYouTube:
+    post:
+      tags: [KnowledgeBase]
+      summary: Store YouTube transcript in an index
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: YouTube content stored
+
+  # ──────────────────────────────────────────────
+  # Extract
+  # ──────────────────────────────────────────────
+
+  /extract:
+    post:
+      tags: [Extract]
+      summary: Extract text from documents
+      description: |
+        Supports PDF (text layer and OCR), images (JPEG, PNG, GIF, WebP, BMP, TIFF), and SVG.
+        Input can be file upload, URL, blob reference, or base64.
+      parameters:
+        - name: force_ocr
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: pdf_mode
+          in: query
+          schema:
+            type: string
+            enum: [auto, text_layer, ocr, spatial_layout]
+            default: auto
+        - name: output_format
+          in: query
+          schema:
+            type: string
+            enum: [json, xy, plain, row, spatial]
+            default: json
+        - name: output_base64
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: meta_data
+          in: query
+          schema:
+            type: string
+            enum: [none, standard, verbose]
+            default: none
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+          application/json:
+            schema:
+              type: object
+              properties:
+                file_url:
+                  type: string
+                blob_url:
+                  type: string
+                blob_sas_token:
+                  type: string
+                file_base64:
+                  type: string
+                file_name:
+                  type: string
+                force_ocr:
+                  type: boolean
+                pdf_mode:
+                  type: string
+                output_format:
+                  type: string
+                meta_data:
+                  type: string
+      responses:
+        '200':
+          description: Extracted text data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtractResponse'
+
+  # ──────────────────────────────────────────────
+  # Folder
+  # ──────────────────────────────────────────────
+
+  /folder/tenant-folders:
+    get:
+      tags: [Folder]
+      summary: List root folders for tenant
+      responses:
+        '200':
+          description: Root folders
+
+  /folder/search:
+    get:
+      tags: [Folder]
+      summary: Search across folders
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Search results
+
+  /folder/contents/{folder_id}:
+    get:
+      tags: [Folder]
+      summary: Get folder contents
+      parameters:
+        - name: folder_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Folder contents
+
+  /folder/folder/{id}:
+    get:
+      tags: [Folder]
+      summary: Get folder details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Folder details
+    delete:
+      tags: [Folder]
+      summary: Delete folder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+
+  /folder/item/{id}:
+    get:
+      tags: [Folder]
+      summary: Get folder item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Folder item
+    delete:
+      tags: [Folder]
+      summary: Delete folder item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+
+  /folder/itemdetail/{id}:
+    get:
+      tags: [Folder]
+      summary: Get item with entity details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Item detail
+
+  /folder/folderdetail/{id}:
+    get:
+      tags: [Folder]
+      summary: Get folder with all contents and details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Folder detail
+
+  /folder/create/{parent_id}:
+    post:
+      tags: [Folder]
+      summary: Create subfolder
+      parameters:
+        - name: parent_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                type:
+                  type: string
+                  enum: [WORKFLOW, WORKER, TOOL, TAXONOMY]
+      responses:
+        '200':
+          description: Created
+
+  /folder/archive-folder/{id}:
+    post:
+      tags: [Folder]
+      summary: Archive a folder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Archived
+
+  /folder/archive-item/{id}:
+    post:
+      tags: [Folder]
+      summary: Archive a folder item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Archived
+
+  /folder/restore/{id}:
+    post:
+      tags: [Folder]
+      summary: Restore from archive
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Restored
+
+  /folder/move/{item_id}:
+    put:
+      tags: [Folder]
+      summary: Move item to folder
+      parameters:
+        - name: item_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                target_folder_id:
+                  type: string
+      responses:
+        '200':
+          description: Moved
+
+  /folder/bulk-move:
+    put:
+      tags: [Folder]
+      summary: Bulk move items
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                item_ids:
+                  type: array
+                  items:
+                    type: string
+                target_folder_id:
+                  type: string
+      responses:
+        '200':
+          description: Moved
+
+  /folder/update/{folder_id}:
+    put:
+      tags: [Folder]
+      summary: Update folder
+      parameters:
+        - name: folder_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Updated
+
+  # ──────────────────────────────────────────────
+  # Organization
+  # ──────────────────────────────────────────────
+
+  /organization:
+    get:
+      tags: [Organization]
+      summary: Get organization(s)
+      parameters:
+        - name: org_id
+          in: query
+          schema:
+            type: string
+        - name: org_guid
+          in: query
+          schema:
+            type: string
+        - name: action
+          in: query
+          description: "Special actions: search, check-duplicate, stats"
+          schema:
+            type: string
+            enum: [search, check-duplicate, stats]
+        - name: q
+          in: query
+          description: Search term (when action=search)
+          schema:
+            type: string
+        - name: org_name
+          in: query
+          description: Name to check (when action=check-duplicate)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Organization data
+    post:
+      tags: [Organization]
+      summary: Create organization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [org_name, tenant_name, api_key]
+              properties:
+                org_name:
+                  type: string
+                tenant_name:
+                  type: string
+                api_key:
+                  type: string
+                action:
+                  type: string
+                  description: Set to "restore" to restore a soft-deleted org
+                org_id:
+                  type: string
+                  description: Required for restore
+      responses:
+        '200':
+          description: Created organization
+    put:
+      tags: [Organization]
+      summary: Update organization or add tenant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                org_id:
+                  type: string
+                OrgName:
+                  type: string
+                tenant_name:
+                  type: string
+                  description: Provide to add a new tenant
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags: [Organization]
+      summary: Delete organization or tenant
+      parameters:
+        - name: org_id
+          in: query
+          schema:
+            type: string
+        - name: tenant_id
+          in: query
+          schema:
+            type: string
+        - name: permanent
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Deleted
+
+  # ──────────────────────────────────────────────
+  # Agent Memory
+  # ──────────────────────────────────────────────
+
+  /agentmemory:
+    post:
+      tags: [AgentMemory]
+      summary: Store a memory
+      description: |
+        Store (or overwrite) a scoped memory document in Cosmos DB.
+        Scope determines visibility: agent (per-worker), tenant, organization, or system.
+        Set `memory_type: "secret"` to store the value in Key Vault (Cosmos holds a keyvault:// URI).
+        Set `versioned: true` to create a version history entry.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [memory_name, data]
+              properties:
+                memory_name:
+                  type: string
+                  description: Logical name of the memory
+                scope:
+                  type: string
+                  enum: [agent, tenant, organization, system]
+                  default: agent
+                data:
+                  description: The value to store (any JSON type)
+                agent_id:
+                  type: string
+                  description: Required when scope is "agent"
+                memory_type:
+                  type: string
+                  enum: [standard, secret]
+                  default: standard
+                  description: '"secret" stores value in Key Vault, Cosmos holds a keyvault:// URI'
+                created_by:
+                  type: string
+                ttl:
+                  type: integer
+                  default: -1
+                  description: Time-to-live in seconds (-1 = no expiry)
+                versioned:
+                  type: boolean
+                  default: false
+                  description: If true, writes a version history entry to agent-memory-history
+                changed_by:
+                  type: string
+                  description: Identifier for who made the change (for version history)
+      responses:
+        '201':
+          description: Memory stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentMemoryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags: [AgentMemory]
+      summary: Update an existing memory
+      description: |
+        Partial update of an existing memory document. Returns 404 if not found.
+        Handles secret type transitions (standard to secret, secret to standard).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [memory_name]
+              properties:
+                memory_name:
+                  type: string
+                scope:
+                  type: string
+                  enum: [agent, tenant, organization, system]
+                  default: agent
+                agent_id:
+                  type: string
+                  description: Required when scope is "agent"
+                data:
+                  description: New data value (omit to keep existing)
+                memory_type:
+                  type: string
+                  enum: [standard, secret]
+                ttl:
+                  type: integer
+                versioned:
+                  type: boolean
+                  default: false
+                changed_by:
+                  type: string
+      responses:
+        '200':
+          description: Memory updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentMemoryResponse'
+        '404':
+          description: Memory not found
+
+  /agentmemory/list:
+    get:
+      tags: [AgentMemory]
+      summary: List memory summaries
+      description: Returns memory metadata (excludes data field) for the tenant, optionally filtered by scope and agent.
+      parameters:
+        - name: scope
+          in: query
+          schema:
+            type: string
+            enum: [agent, tenant, organization, system]
+        - name: agent_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of memory summaries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AgentMemorySummary'
+
+  /agentmemory/{scope}/{memory_name}:
+    get:
+      tags: [AgentMemory]
+      summary: Recall a memory
+      description: |
+        Retrieve a memory by scope and name. Use scope `cascade` for hierarchical lookup
+        (agent -> tenant -> organization -> system; first match wins, ~1 RU per point read).
+        Secret-type memories are resolved from Key Vault automatically.
+      parameters:
+        - name: scope
+          in: path
+          required: true
+          description: "Memory scope, or \"cascade\" for hierarchical lookup"
+          schema:
+            type: string
+            enum: [agent, tenant, organization, system, cascade]
+        - name: memory_name
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: agent_id
+          in: query
+          description: Agent identifier (used for agent scope and cascade)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Memory recalled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/AgentMemoryFull'
+        '404':
+          description: Memory not found
+    delete:
+      tags: [AgentMemory]
+      summary: Delete a memory
+      description: |
+        Delete a memory document. If it's a secret type, also deletes the Key Vault secret.
+        Set `purge_history=true` to also delete all version history entries.
+      parameters:
+        - name: scope
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [agent, tenant, organization, system]
+        - name: memory_name
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: agent_id
+          in: query
+          schema:
+            type: string
+        - name: purge_history
+          in: query
+          description: If true, also deletes all version history entries
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Memory deleted
+        '404':
+          description: Memory not found
+
+  /agentmemory/{scope}/{memory_name}/history:
+    get:
+      tags: [AgentMemory]
+      summary: Get version history
+      description: |
+        Retrieve version history for a memory. Requires opt-in versioning (`versioned: true` on store/update).
+        Use `version` parameter to get a specific version, or `limit`/`offset` for paginated history list.
+      parameters:
+        - name: scope
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [agent, tenant, organization, system]
+        - name: memory_name
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: agent_id
+          in: query
+          schema:
+            type: string
+        - name: version
+          in: query
+          description: Specific version number to retrieve
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Version history entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    oneOf:
+                      - type: array
+                        items:
+                          $ref: '#/components/schemas/AgentMemoryHistoryEntry'
+                      - $ref: '#/components/schemas/AgentMemoryHistoryEntry'
+        '404':
+          description: Version not found
+
+  /agentmemory/{scope}/{memory_name}/restore:
+    post:
+      tags: [AgentMemory]
+      summary: Restore a previous version
+      description: |
+        Restore a memory to a previous version by version number. This creates a new store operation
+        with `versioned: true`, so the restore itself is recorded in history.
+      parameters:
+        - name: scope
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [agent, tenant, organization, system]
+        - name: memory_name
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [version_number]
+              properties:
+                version_number:
+                  type: integer
+                  description: The version number to restore
+                agent_id:
+                  type: string
+                changed_by:
+                  type: string
+      responses:
+        '200':
+          description: Memory restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentMemoryResponse'
+        '404':
+          description: Version not found
+
+  # ──────────────────────────────────────────────
+  # Customer (Legacy)
+  # ──────────────────────────────────────────────
+
+  /customer:
+    get:
+      tags: [Customer]
+      summary: Get customer / tenant keys
+      parameters:
+        - name: c_id
+          in: query
+          schema:
+            type: string
+        - name: t_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Customer data
+    post:
+      tags: [Customer]
+      summary: Create customer with tenant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_name:
+                  type: string
+                email:
+                  type: string
+                tenant_name:
+                  type: string
+                api_key:
+                  type: string
+      responses:
+        '200':
+          description: Created
+    put:
+      tags: [Customer]
+      summary: Add tenant to customer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                tenant_name:
+                  type: string
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags: [Customer]
+      summary: Delete customer or tenant
+      parameters:
+        - name: c_id
+          in: query
+          schema:
+            type: string
+        - name: t_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+
+  # ──────────────────────────────────────────────
+  # Schedule
+  # ──────────────────────────────────────────────
+
+  /schedule:
+    get:
+      tags: [Schedule]
+      summary: List schedules
+      parameters:
+        - name: worker_id
+          in: query
+          schema:
+            type: string
+        - name: task_type
+          in: query
+          schema:
+            type: string
+        - name: cron
+          in: query
+          schema:
+            type: string
+        - name: enabled
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Schedules list
+    post:
+      tags: [Schedule]
+      summary: Create a schedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Schedule'
+      responses:
+        '200':
+          description: Created schedule
+    patch:
+      tags: [Schedule]
+      summary: Update a schedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [schedule_id]
+              properties:
+                schedule_id:
+                  type: string
+                worker_id:
+                  type: string
+                task_type:
+                  type: string
+                cron:
+                  type: string
+                task_metadata:
+                  type: object
+                timezone:
+                  type: string
+                run_on_instance:
+                  type: string
+                enabled:
+                  type: boolean
+                description:
+                  type: string
+      responses:
+        '200':
+          description: Updated
+
+  /schedule/{schedule_id}:
+    get:
+      tags: [Schedule]
+      summary: Get specific schedule
+      parameters:
+        - name: schedule_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Schedule details
+    delete:
+      tags: [Schedule]
+      summary: Delete schedule
+      parameters:
+        - name: schedule_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+
+  /schedule/retrievedue/{instance}:
+    get:
+      tags: [Schedule]
+      summary: Get due schedules for a function instance
+      parameters:
+        - name: instance
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Due schedules
+
+  # ──────────────────────────────────────────────
+  # Storage
+  # ──────────────────────────────────────────────
+
+  /Storage:
+    post:
+      tags: [Storage]
+      summary: Generate SAS upload URL
+      description: Creates a secure SAS URL for direct blob upload. Optionally ties the upload to a worker and workflow.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [folder_name, file_name]
+              properties:
+                folder_name:
+                  type: string
+                file_name:
+                  type: string
+                file_extension:
+                  type: string
+                  default: .pdf
+                worker_id:
+                  type: string
+                worker_name:
+                  type: string
+                workflow_short_name:
+                  type: string
+                tenant_id:
+                  type: string
+                correlation_id:
+                  type: string
+      responses:
+        '200':
+          description: SAS upload URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  uploadUrl:
+                    type: string
+                    description: Pre-signed SAS URL for upload
+                  blobName:
+                    type: string
+                  container:
+                    type: string
+                  worker_id:
+                    type: string
+
+  # ──────────────────────────────────────────────
+  # Entity
+  # ──────────────────────────────────────────────
+
+  /Entity:
+    get:
+      tags: [Entity]
+      summary: Get entity
+      parameters:
+        - name: t_id
+          in: query
+          description: Tenant ID
+          schema:
+            type: string
+        - name: at_id
+          in: query
+          description: Agency tenant ID
+          schema:
+            type: string
+        - name: d_id
+          in: query
+          description: Document ID
+          schema:
+            type: string
+        - name: e
+          in: query
+          description: Email address
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Entity data
+    post:
+      tags: [Entity]
+      summary: Create entity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  new_entity_id:
+                    type: string
+    put:
+      tags: [Entity]
+      summary: Update entity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, tenant_id]
+              properties:
+                id:
+                  type: string
+                tenant_id:
+                  type: string
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags: [Entity]
+      summary: Delete entity
+      parameters:
+        - name: t_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+
+  # ──────────────────────────────────────────────
+  # Component
+  # ──────────────────────────────────────────────
+
+  /component/{id}/info:
+    get:
+      tags: [Component]
+      summary: Get component info
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Folder ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Component info
+
+  /component/{id}/setting:
+    get:
+      tags: [Component]
+      summary: Get component setting
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: path
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: default
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Setting value
+
+  /component/{id}/tool-config:
+    get:
+      tags: [Component]
+      summary: Get tool component config
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: tool_id
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Tool config
+
+  /component/{id}/configure:
+    post:
+      tags: [Component]
+      summary: Configure a component
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Configured
+
+  /component/{id}/disable:
+    post:
+      tags: [Component]
+      summary: Disable a component
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Disabled
+
+  /component/{id}/token:
+    put:
+      tags: [Component]
+      summary: Update component token
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Token updated
+
+  # ──────────────────────────────────────────────
+  # PromptLib
+  # ──────────────────────────────────────────────
+
+  /promptlib:
+    get:
+      tags: [PromptLib]
+      summary: Retrieve prompts
+      responses:
+        '200':
+          description: Prompts list
+    post:
+      tags: [PromptLib]
+      summary: Create/update prompt (upsert)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                type:
+                  type: string
+                content:
+                  type: string
+                variables:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Upserted prompt
+    put:
+      tags: [PromptLib]
+      summary: Create/update prompt (upsert)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Upserted
+    delete:
+      tags: [PromptLib]
+      summary: Delete prompt
+      responses:
+        '200':
+          description: Deleted
+
+  # ──────────────────────────────────────────────
+  # PromptLibExt
+  # ──────────────────────────────────────────────
+
+  /promptlibext/{collection}:
+    get:
+      tags: [PromptLibExt]
+      summary: List documents in collection
+      parameters:
+        - name: collection
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Documents
+    post:
+      tags: [PromptLibExt]
+      summary: Create document in collection
+      parameters:
+        - name: collection
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Created
+    put:
+      tags: [PromptLibExt]
+      summary: Update document in collection
+      parameters:
+        - name: collection
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Updated
+
+  /promptlibext/{collection}/{collection_pk}/{doc_id}:
+    get:
+      tags: [PromptLibExt]
+      summary: Get specific document
+      parameters:
+        - name: collection
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: collection_pk
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: doc_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Document
+    delete:
+      tags: [PromptLibExt]
+      summary: Delete document
+      parameters:
+        - name: collection
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: collection_pk
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: doc_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+
+  # ──────────────────────────────────────────────
+  # KeyVault
+  # ──────────────────────────────────────────────
+
+  /keyvault:
+    post:
+      tags: [KeyVault]
+      summary: Store a secret
+      description: Requires function-level auth key.
+      security:
+        - FunctionKey: []
+          SubscriptionKey: []
+          ApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, value]
+              properties:
+                name:
+                  type: string
+                value:
+                  type: string
+                tags:
+                  type: object
+      responses:
+        '200':
+          description: Secret stored
+
+  /keyvault/{secret_name}:
+    get:
+      tags: [KeyVault]
+      summary: Retrieve a secret
+      security:
+        - FunctionKey: []
+          SubscriptionKey: []
+          ApiKey: []
+      parameters:
+        - name: secret_name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Secret value
+    delete:
+      tags: [KeyVault]
+      summary: Delete a secret
+      security:
+        - FunctionKey: []
+          SubscriptionKey: []
+          ApiKey: []
+      parameters:
+        - name: secret_name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+
+  # ──────────────────────────────────────────────
+  # Event Handler
+  # ──────────────────────────────────────────────
+
+  /event/{subscription}/{APIkey}/{agent_id}/{workflowname}/action-endpoint:
+    post:
+      tags: [Event Handler]
+      summary: External event ingestion (e.g. Slack)
+      description: |
+        Receives external events (e.g. Slack events) and routes them to a workflow.
+        Auth is embedded in the URL path. Supports Slack URL verification challenge.
+      security: []
+      parameters:
+        - name: subscription
+          in: path
+          required: true
+          description: Ocp-Apim-Subscription-Key
+          schema:
+            type: string
+        - name: APIkey
+          in: path
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: agent_id
+          in: path
+          required: true
+          description: Doozer name
+          schema:
+            type: string
+        - name: workflowname
+          in: path
+          required: true
+          description: Workflow short name
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Event processed or URL verification challenge returned
+
+  # ──────────────────────────────────────────────
+  # Human-in-the-Loop
+  # ──────────────────────────────────────────────
+
+  /humanloop-callback:
+    post:
+      tags: [Workflow]
+      summary: Human-in-the-loop callback
+      description: |
+        Receives human responses during workflow execution (e.g. from Teams Adaptive Cards
+        or custom web forms). Resumes the paused workflow.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                channelData:
+                  type: object
+                  properties:
+                    workflow_instance_id:
+                      type: string
+                    step_id:
+                      type: string
+                    output_variable:
+                      type: string
+                value:
+                  type: object
+                  properties:
+                    response:
+                      type: string
+                from:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    aadObjectId:
+                      type: string
+                conversation:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                text:
+                  type: string
+                custom_form:
+                  type: object
+      responses:
+        '200':
+          description: Callback processed, workflow resumed
+
+  # ──────────────────────────────────────────────
+  # Miscellaneous
+  # ──────────────────────────────────────────────
+
+  /Story:
+    get:
+      tags: [Entity]
+      summary: Get stories
+      responses:
+        '200':
+          description: Stories
+    post:
+      tags: [Entity]
+      summary: Create story
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Created
+    put:
+      tags: [Entity]
+      summary: Update story
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags: [Entity]
+      summary: Delete story
+      responses:
+        '200':
+          description: Deleted
+
+  /style:
+    get:
+      tags: [Entity]
+      summary: Get styles
+      responses:
+        '200':
+          description: Styles
+    put:
+      tags: [Entity]
+      summary: Create/update style
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Upserted
+    delete:
+      tags: [Entity]
+      summary: Delete style
+      responses:
+        '200':
+          description: Deleted
+
+  /GetLocalizedData:
+    get:
+      tags: [Entity]
+      summary: Get localized data
+      responses:
+        '200':
+          description: Localized data
+
+  /video/{video_id}:
+    get:
+      tags: [Entity]
+      summary: Get video file
+      parameters:
+        - name: video_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Video file or URL
+
+  /apim:
+    post:
+      tags: [Monitoring]
+      summary: APIM policy endpoint
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Response
+
+  /mcp:
+    get:
+      tags: [Integration]
+      summary: MCP protocol endpoint (GET)
+      security:
+        - FunctionKey: []
+      responses:
+        '200':
+          description: MCP response
+    post:
+      tags: [Integration]
+      summary: MCP protocol endpoint (POST)
+      security:
+        - FunctionKey: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: MCP response
+
+  # ──────────────────────────────────────────────
+  # Monitoring & Utilities
+  # ──────────────────────────────────────────────
+
+  /Health:
+    get:
+      tags: [Monitoring]
+      summary: System health check
+      security: []
+      parameters:
+        - name: detailed
+          in: query
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: System healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: System unhealthy
+
+  /HelloWorld:
+    get:
+      tags: [Monitoring]
+      summary: Connectivity test
+      security: []
+      parameters:
+        - name: name
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Hello response
+
+  /HelloWorld2:
+    get:
+      tags: [Monitoring]
+      summary: Connectivity test (alternate)
+      security: []
+      responses:
+        '200':
+          description: Hello response
+
+  /HelloError:
+    get:
+      tags: [Monitoring]
+      summary: Error test endpoint
+      security:
+        - FunctionKey: []
+      responses:
+        '200':
+          description: Test response
+        '500':
+          description: Intentional error
+
+  /CallbackStub:
+    post:
+      tags: [Monitoring]
+      summary: Webhook test stub
+      description: Logs and echoes back any payload received. Use as callback_url for testing.
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Echoed payload
+
+  /QueryLog:
+    put:
+      tags: [Monitoring]
+      summary: Log a query interaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                knowledgecode:
+                  type: string
+                query:
+                  type: string
+                response:
+                  type: string
+                metadata:
+                  type: string
+      responses:
+        '200':
+          description: Logged
+
+  /TestAbility:
+    post:
+      tags: [Monitoring]
+      summary: Test a tool/ability
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Test result
+
+  /UpdateTool:
+    post:
+      tags: [Monitoring]
+      summary: Legacy tool update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Updated
+
+  /BoxCallbackTest:
+    post:
+      tags: [Monitoring]
+      summary: Box.com webhook test
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Callback processed
+
+components:
+  securitySchemes:
+    SubscriptionKey:
+      type: apiKey
+      in: header
+      name: Ocp-Apim-Subscription-Key
+      description: Azure API Management subscription key
+    ApiKey:
+      type: apiKey
+      in: header
+      name: API_KEY
+      description: Tenant-specific API key for authorization
+    FunctionKey:
+      type: apiKey
+      in: query
+      name: code
+      description: Azure Function host key (for function-level auth endpoints)
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+    Unauthorized:
+      description: Authentication failed
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: Invalid API key
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+        message:
+          type: string
+
+    AskDoozerRequest:
+      type: object
+      required: [query, doozer_name]
+      properties:
+        query:
+          type: string
+          description: The question or prompt for the AI agent
+        doozer_name:
+          type: string
+          description: Name of the worker/agent to use
+        system_prompt:
+          type: string
+          description: Optional system prompt override
+        model:
+          type: string
+          description: LLM model identifier
+          default: gpt-doozer-o
+        provider:
+          type: string
+          description: LLM provider
+          default: Azure
+        max_tokens:
+          type: integer
+          description: Maximum response tokens
+
+    AskDoozerResponse:
+      type: object
+      properties:
+        response:
+          type: string
+          description: AI generated response
+        workflow_instance_id:
+          type: string
+        tokens_used:
+          type: integer
+
+    QueueRequest:
+      type: object
+      required: [workflow_short_name]
+      properties:
+        workflow_short_name:
+          type: string
+          description: Short name of the workflow to execute
+        doozer_name:
+          type: string
+          description: Worker/agent name
+        system_prompt:
+          type: string
+        query:
+          type: string
+          description: Optional user query passed to the workflow
+        variables:
+          oneOf:
+            - type: object
+              description: Key-value variables (preferred format)
+            - type: array
+              description: Legacy format - array containing a single dict
+              items:
+                type: object
+        callback_url:
+          type: string
+          description: URL to receive status updates during execution
+        schedule:
+          type: object
+          description: Delayed execution settings
+          properties:
+            execute_dt:
+              type: string
+              description: "Absolute datetime (format: YYYY-MM-DD HH:MM:SS UTC)"
+              example: "2025-06-15 14:00:00 UTC"
+            execute_after_seconds:
+              type: string
+              description: Relative delay in seconds
+              example: "300"
+
+    QueueResponse:
+      type: object
+      properties:
+        instance_id:
+          type: string
+          description: UUID for tracking this workflow execution
+        pop_receipt:
+          type: string
+          description: Azure Queue pop receipt
+
+    WorkflowMaster:
+      type: object
+      properties:
+        id:
+          type: string
+        record_type:
+          type: string
+          example: master
+        short_name:
+          type: string
+          description: Unique workflow identifier
+        workflow_name:
+          type: string
+          description: Display name
+        description:
+          type: string
+        doozer_activity_description:
+          type: string
+          description: Activity description (supports {variable} substitution)
+        model:
+          type: string
+          default: gpt-doozer-o
+        temperature:
+          type: number
+          default: 0.3
+        max_tokens:
+          type: integer
+          default: 1000
+        start_step:
+          type: string
+          description: Step ID where execution begins
+        worker_id:
+          type: string
+        available_as_a_tool:
+          type: boolean
+          default: false
+        variables:
+          type: array
+          description: Single-element array containing a dict of variable defaults
+          items:
+            type: object
+        steps:
+          type: object
+          description: Dictionary of step_id to step definition
+          additionalProperties:
+            $ref: '#/components/schemas/WorkflowStep'
+
+    WorkflowStep:
+      type: object
+      required: [step_name, type]
+      properties:
+        step_name:
+          type: string
+        type:
+          type: string
+          enum:
+            - start
+            - end
+            - LLM
+            - ask_doozer
+            - execute_ability
+            - execute_ability_params
+            - ability
+            - execute_python
+            - execute_flow
+            - execute_sub_process
+            - synchronize
+            - sync
+            - switch
+            - calculate
+            - loop_ability
+            - query_index
+            - human_in_the_loop
+            - message
+            - remember
+            - recall
+            - browser_action
+            - execute_ws_post
+            - execute_ws_get
+            - process_email
+            - refresh_reference_dictionary
+        output:
+          type: string
+          description: Variable name to store result
+        next_step:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+          description: Next step ID(s). Array for parallel fork.
+        use_memory:
+          type: boolean
+          default: false
+        output_to_memory:
+          type: boolean
+          default: false
+        temperature:
+          type: number
+        model:
+          type: string
+        timeout:
+          type: integer
+          default: 230
+        logical_switch:
+          type: array
+          items:
+            type: object
+            properties:
+              condition:
+                type: string
+                description: "Format: operator:value (e.g. contains:approved, equals:yes)"
+              next_step:
+                type: string
+        regex_switch:
+          type: array
+          items:
+            type: object
+            properties:
+              pattern:
+                type: string
+              next_step:
+                type: string
+        llm_decision:
+          type: array
+          items:
+            type: object
+            properties:
+              condition:
+                type: string
+              next_step:
+                type: string
+        transform:
+          type: object
+          properties:
+            prompt:
+              type: string
+            training:
+              type: boolean
+        versioned:
+          type: boolean
+          default: false
+          description: "For remember steps: if true, writes a version history entry when storing memory"
+        cache_enabled:
+          type: boolean
+          default: false
+        cache_expiry:
+          type: integer
+          default: 0
+
+    WorkflowInstance:
+      type: object
+      properties:
+        id:
+          type: string
+        record_type:
+          type: string
+          example: instance
+        workflow_short_name:
+          type: string
+        workflow_name:
+          type: string
+        status:
+          type: string
+          enum: [starting, running, waiting, complete, error, terminated]
+        current_step_id:
+          type: string
+        active_steps:
+          type: array
+          items:
+            type: string
+        completed_steps:
+          type: array
+          items:
+            type: string
+        doozer_name:
+          type: string
+        tenant_info:
+          type: object
+        initial_variables:
+          type: object
+        data_dictinary:
+          type: object
+          description: Current variable store (note historic spelling)
+        steps_separated:
+          type: boolean
+        execution_steps:
+          type: array
+          items:
+            type: object
+        costs:
+          type: object
+        error_message:
+          type: string
+          nullable: true
+        error_step_id:
+          type: string
+          nullable: true
+        final_output:
+          type: string
+        markdown_summary:
+          type: string
+
+    WorkflowInstanceRequest:
+      type: object
+      properties:
+        workflow_short_name:
+          type: string
+          description: Required unless workflow_definition is provided
+        workflow_definition:
+          type: object
+          description: On-the-fly workflow definition (bypasses master lookup)
+        doozer_name:
+          type: string
+        system_prompt:
+          type: string
+        query:
+          type: string
+        restart_instance_id:
+          type: string
+          description: Instance ID to restart from
+        reference_instance_id:
+          type: string
+          description: Instance ID to reference data from
+        debug_level:
+          type: string
+        callback_url:
+          type: string
+        variables:
+          type: object
+        initiation_context:
+          type: string
+
+    Worker:
+      type: object
+      properties:
+        WorkerID:
+          type: integer
+        Name:
+          type: string
+        SystemPrompt:
+          type: string
+        Model:
+          type: string
+        Provider:
+          type: string
+        HireStatus:
+          type: string
+          enum: [HIRED, AVAILABLE, FIRED]
+        tools:
+          type: array
+          items:
+            type: object
+            properties:
+              ToolID:
+                type: integer
+              ToolName:
+                type: string
+
+    Tool:
+      type: object
+      properties:
+        id:
+          type: string
+        tool_name:
+          type: string
+        type:
+          type: string
+          enum: [integration, workflow, python, builtin]
+        version:
+          type: integer
+        tool_configuration:
+          type: object
+          properties:
+            description:
+              type: string
+            parameters:
+              type: object
+            integration_connection_id:
+              type: integer
+        folder_id:
+          type: integer
+
+    Schedule:
+      type: object
+      required: [worker_id, task_type, cron]
+      properties:
+        schedule_id:
+          type: integer
+          readOnly: true
+        worker_id:
+          type: string
+        task_type:
+          type: string
+        cron:
+          type: string
+          description: CRON expression (6-field Azure format)
+          example: "0 */5 * * * *"
+        timezone:
+          type: string
+          default: UTC
+        task_metadata:
+          type: object
+          properties:
+            workflow_short_name:
+              type: string
+            variables:
+              type: object
+        run_on_instance:
+          type: string
+          description: Function app instance identifier
+        enabled:
+          type: boolean
+          default: true
+        description:
+          type: string
+        last_run_datetime:
+          type: string
+          format: date-time
+          readOnly: true
+
+    ExtractResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              x:
+                type: number
+              "y":
+                type: number
+              text:
+                type: string
+              page:
+                type: string
+              source:
+                type: string
+                enum: [ocr, text_layer, svg_text]
+              font_size:
+                type: number
+              font_name:
+                type: string
+        meta_data:
+          type: object
+          properties:
+            file_type:
+              type: string
+            output_format:
+              type: string
+            method_used:
+              type: string
+            pages_processed:
+              type: integer
+            has_text_layer:
+              type: boolean
+            fallback_used:
+              type: boolean
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        service:
+          type: string
+          example: doozer-backend
+        backend_id:
+          type: string
+        response_time_ms:
+          type: integer
+        checks:
+          type: object
+          properties:
+            cosmos_db:
+              $ref: '#/components/schemas/HealthCheck'
+            key_vault:
+              $ref: '#/components/schemas/HealthCheck'
+            blob_storage:
+              $ref: '#/components/schemas/HealthCheck'
+            queue_storage:
+              $ref: '#/components/schemas/HealthCheck'
+            memory_usage:
+              type: object
+              properties:
+                status:
+                  type: string
+                percentage:
+                  type: number
+
+    AgentMemoryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              description: "Deterministic document ID: {scope}:{agent_id or '_'}:{memory_name}"
+            scope:
+              type: string
+              enum: [agent, tenant, organization, system]
+            memory_name:
+              type: string
+            memory_type:
+              type: string
+              enum: [standard, secret]
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+
+    AgentMemorySummary:
+      type: object
+      description: Memory metadata without the data field
+      properties:
+        id:
+          type: string
+        scope:
+          type: string
+        memory_name:
+          type: string
+        memory_type:
+          type: string
+        agent_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AgentMemoryFull:
+      type: object
+      description: Full memory document including resolved data
+      properties:
+        id:
+          type: string
+        scope:
+          type: string
+        memory_name:
+          type: string
+        memory_type:
+          type: string
+        data:
+          description: The stored value (secrets are resolved from Key Vault)
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AgentMemoryHistoryEntry:
+      type: object
+      description: A single version history entry
+      properties:
+        id:
+          type: string
+        memory_doc_id:
+          type: string
+          description: The deterministic ID of the memory being versioned
+        version_number:
+          type: integer
+        operation:
+          type: string
+          enum: [store, update, restore]
+        changed_by:
+          type: string
+        changed_at:
+          type: string
+          format: date-time
+        data:
+          description: The data at this version
+        previous_data:
+          description: The data before this change
+        scope:
+          type: string
+        memory_name:
+          type: string
+        memory_type:
+          type: string
+
+    HealthCheck:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, error]
+        response_time_ms:
+          type: integer
