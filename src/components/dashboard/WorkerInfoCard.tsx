@@ -27,17 +27,9 @@ export function WorkerInfoCard({ worker, isLoading }: WorkerInfoCardProps) {
   return (
     <Card>
       <div className="flex items-center gap-4">
-        {worker.Picture ? (
-          <img
-            src={worker.Picture}
-            alt={worker.Name}
-            className="h-16 w-16 rounded-full object-cover ring-2 ring-primary/20"
-          />
-        ) : (
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-xl font-bold text-white">
-            {worker.Name?.charAt(0) ?? '?'}
-          </div>
-        )}
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-xl font-bold text-white">
+          {worker.Name?.charAt(0) ?? '?'}
+        </div>
         <div>
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">
             {worker.Name}

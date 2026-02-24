@@ -13,7 +13,6 @@ export interface Worker {
   Email: string;
   HireStatus: string;
   WorkerGUID: string;
-  Picture: string;
   tools: WorkerTool[];
 }
 

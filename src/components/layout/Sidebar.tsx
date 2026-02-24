@@ -27,17 +27,9 @@ export function Sidebar() {
       {worker && (
         <div className="border-t border-white/10 p-4">
           <div className="flex items-center gap-3">
-            {worker.Picture ? (
-              <img
-                src={worker.Picture}
-                alt={worker.Name}
-                className="h-10 w-10 rounded-full object-cover"
-              />
-            ) : (
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-bold">
-                {worker.Name?.charAt(0) ?? '?'}
-              </div>
-            )}
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-bold">
+              {worker.Name?.charAt(0) ?? '?'}
+            </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">{worker.Name}</p>
               <p className="truncate text-xs text-gray-400">
