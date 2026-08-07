@@ -23,7 +23,7 @@
 | Worker name / guid | Dylan / `0c545bde-750c-4669-924e-9b981c7571d9` |
 | Other workers on tenant | Builder Agent / `b41c1799-91ee-4431-9b05-952f35e11de7` (platform builder — not this app's worker) |
 | Knowledge base | none used |
-| Dev API key location | gitignored `.env.local` at the repo root (`VITE_DEFAULT_API_KEY`) — <TODO: Top Level tenant key not yet on this machine; classifier blocked ApiKey/KeyVault reads. Ask Gavin or pull `ApiKey.KeyVaultSecretId` for tenant guid above.> |
+| Dev API key location | gitignored `.env.local` at the repo root (`VITE_DEFAULT_API_KEY`) — populated 2026-08-07 (key supplied by Gavin; verified against Top Level). Canonical store: Key Vault via SQL `ApiKey.KeyVaultSecretId`. |
 | CIAM tenant / client id | n/a — dashboard runs api-key mode only (internal ops tool) |
 
 Reference bolt-on env with a working dev key for a *different* tenant
