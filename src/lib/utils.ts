@@ -1,90 +1,66 @@
-import { format, startOfHour, startOfDay, startOfWeek, startOfMonth, subDays, subMinutes, subHours, subMonths, parseISO } from 'date-fns';
-import type { WorkflowReportInstance } from '../api/types';
-import { STATUS_COLORS } from './constants';
+import {
+  format,
+  startOfHour,
+  startOfDay,
+  startOfWeek,
+  startOfMonth,
+  subDays,
+  subMinutes,
+  subHours,
+  subMonths,
+  parseISO,
+} from 'date-fns';
+import type { TenantConfig, WorkflowInstanceSummary } from '../api/types';
+import { STATUS_COLORS, RUNNING_STATUSES } from './constants';
+
+export function isUsableTenant(t: TenantConfig | null): t is TenantConfig {
+  return !!t && !!t.apiBaseUrl && !!t.apiKey && !!t.tenantGuid && !!t.workerGuid;
+}
 
 /**
- * Map a user-facing date range to the API date_range value(s) needed to cover
- * the user's local timezone. The API interprets ranges in UTC, so for
- * calendar-based ranges we may need to fetch a broader window and filter
- * client-side.
+ * Local-timezone boundaries for a user-facing date range. `end` is null for
+ * open-ended ranges ("everything since start").
  */
-export function getApiDateRange(dateRange: string): string {
-  // Relative ranges (last X) are fine as-is since they're relative to "now"
+export function getDateRangeBounds(dateRange: string): {
+  start: Date | null;
+  end: Date | null;
+} {
+  const now = new Date();
   switch (dateRange) {
+    case 'last 5 minutes':
+      return { start: subMinutes(now, 5), end: null };
+    case 'last hour':
+      return { start: subHours(now, 1), end: null };
+    case 'last 6 hours':
+      return { start: subHours(now, 6), end: null };
     case 'today':
-      // "today" in local tz might start in yesterday UTC
-      return 'last 7 days';
+      return { start: startOfDay(now), end: null };
     case 'yesterday':
-      return 'last 7 days';
+      return { start: startOfDay(subDays(now, 1)), end: startOfDay(now) };
+    case 'last 7 days':
+      return { start: subDays(now, 7), end: null };
     case 'this week':
-      return 'last 7 days';
+      return { start: startOfWeek(now, { weekStartsOn: 1 }), end: null };
     case 'this month':
-      return 'this month';
+      return { start: startOfMonth(now), end: null };
     case 'last month':
-      return 'last month';
+      return { start: startOfMonth(subMonths(now, 1)), end: startOfMonth(now) };
     default:
-      return dateRange;
+      return { start: null, end: null };
   }
 }
 
 /**
- * Filter instances to match the user's local timezone boundaries for the
- * selected date range. Returns all instances if no filtering is needed
- * (e.g., relative ranges like "last hour").
+ * date_from/date_to query params for GET /tenants/{t}/workflow-instances.
+ * Instance timestamps are naive UTC ISO strings, so send UTC datetimes
+ * without a timezone suffix.
  */
-export function filterByLocalTimezone(
-  instances: WorkflowReportInstance[],
-  dateRange: string,
-): WorkflowReportInstance[] {
-  const now = new Date();
-  let start: Date | null = null;
-  let end: Date | null = null;
-
-  switch (dateRange) {
-    case 'last 5 minutes':
-      start = subMinutes(now, 5);
-      break;
-    case 'last hour':
-      start = subHours(now, 1);
-      break;
-    case 'last 6 hours':
-      start = subHours(now, 6);
-      break;
-    case 'today':
-      start = startOfDay(now);
-      break;
-    case 'yesterday': {
-      const yesterdayDate = subDays(now, 1);
-      start = startOfDay(yesterdayDate);
-      end = startOfDay(now);
-      break;
-    }
-    case 'last 7 days':
-      start = subDays(now, 7);
-      break;
-    case 'this week':
-      start = startOfWeek(now, { weekStartsOn: 1 });
-      break;
-    case 'this month':
-      start = startOfMonth(now);
-      break;
-    case 'last month': {
-      const lastMonth = subMonths(now, 1);
-      start = startOfMonth(lastMonth);
-      end = startOfMonth(now);
-      break;
-    }
-    default:
-      return instances;
-  }
-
-  return instances.filter((inst) => {
-    if (!inst.createddate) return false;
-    const created = parseISO(inst.createddate);
-    if (start && created < start) return false;
-    if (end && created >= end) return false;
-    return true;
-  });
+export function getDateRangeParams(dateRange: string): Record<string, string> {
+  const { start, end } = getDateRangeBounds(dateRange);
+  const params: Record<string, string> = {};
+  if (start) params.date_from = start.toISOString().slice(0, 19);
+  if (end) params.date_to = end.toISOString().slice(0, 19);
+  return params;
 }
 
 export interface DashboardMetrics {
@@ -114,12 +90,14 @@ export interface DistributionDataPoint {
   errors: number;
 }
 
-export function computeMetrics(instances: WorkflowReportInstance[]): DashboardMetrics {
+export function computeMetrics(
+  instances: WorkflowInstanceSummary[],
+): DashboardMetrics {
   const total = instances.length;
   const completed = instances.filter((i) => i.status === 'complete').length;
-  const errors = instances.filter((i) => i.status === 'error').length;
+  const errors = instances.filter((i) => i.status === 'failed').length;
   const running = instances.filter((i) =>
-    ['running', 'starting', 'waiting'].includes(i.status),
+    RUNNING_STATUSES.includes(i.status),
   ).length;
   const durations = instances
     .filter((i) => i.duration_seconds != null && i.duration_seconds > 0)
@@ -138,8 +116,13 @@ export function computeMetrics(instances: WorkflowReportInstance[]): DashboardMe
   };
 }
 
+/** Instance timestamps are naive UTC — suffix Z so parsing lands in local tz. */
+export function parseInstanceDate(dateStr: string): Date {
+  return parseISO(/[zZ]|[+-]\d\d:?\d\d$/.test(dateStr) ? dateStr : dateStr + 'Z');
+}
+
 export function computeVolumeData(
-  instances: WorkflowReportInstance[],
+  instances: WorkflowInstanceSummary[],
   dateRange: string,
 ): VolumeDataPoint[] {
   const useHourly = [
@@ -156,8 +139,8 @@ export function computeVolumeData(
   const buckets = new Map<string, VolumeDataPoint>();
 
   for (const instance of instances) {
-    if (!instance.createddate) continue;
-    const date = parseISO(instance.createddate);
+    if (!instance.start_date) continue;
+    const date = parseInstanceDate(instance.start_date);
     const bucketTime = bucketFn(date);
     const key = bucketTime.toISOString();
     const label = format(bucketTime, formatStr);
@@ -169,7 +152,7 @@ export function computeVolumeData(
     const bucket = buckets.get(key)!;
     if (instance.status === 'complete') {
       bucket.complete++;
-    } else if (instance.status === 'error') {
+    } else if (instance.status === 'failed') {
       bucket.error++;
     } else {
       bucket.other++;
@@ -182,7 +165,7 @@ export function computeVolumeData(
 }
 
 export function computeStatusData(
-  instances: WorkflowReportInstance[],
+  instances: WorkflowInstanceSummary[],
 ): StatusDataPoint[] {
   const counts = new Map<string, number>();
   for (const instance of instances) {
@@ -197,7 +180,7 @@ export function computeStatusData(
 }
 
 export function computeDistributionData(
-  instances: WorkflowReportInstance[],
+  instances: WorkflowInstanceSummary[],
 ): DistributionDataPoint[] {
   const groups = new Map<string, { count: number; errors: number }>();
   for (const instance of instances) {
@@ -207,7 +190,7 @@ export function computeDistributionData(
     }
     const g = groups.get(name)!;
     g.count++;
-    if (instance.status === 'error') g.errors++;
+    if (instance.status === 'failed') g.errors++;
   }
 
   return Array.from(groups.entries())
@@ -237,7 +220,7 @@ export function truncateId(id: string, len = 8): string {
 export function timeAgo(dateStr: string | null | undefined): string {
   if (!dateStr) return '-';
   const now = Date.now();
-  const then = parseISO(dateStr).getTime();
+  const then = parseInstanceDate(dateStr).getTime();
   const diffMs = now - then;
   const diffSec = Math.floor(diffMs / 1000);
 

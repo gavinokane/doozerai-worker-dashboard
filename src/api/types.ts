@@ -1,94 +1,96 @@
 export interface TenantConfig {
   id: string;
   displayName: string;
+  /** Platform REST base, ends in /api (e.g. https://func-doozer-c824-api-dev.azurewebsites.net/api) */
+  apiBaseUrl: string;
+  /** Tenant-scoped X-Api-Key */
   apiKey: string;
-  subscriptionKey: string;
-  workerId: number;
+  tenantGuid: string;
+  workerGuid: string;
 }
 
 export interface Worker {
-  WorkerID: number;
-  Name: string;
-  Role: string;
-  Email: string;
-  HireStatus: string;
-  WorkerGUID: string;
-  tools: WorkerTool[];
+  worker_guid: string;
+  name: string;
+  role: string | null;
+  description: string | null;
+  email: string | null;
+  picture: string | null;
+  hire_status: string | null;
+  tool_guids: string[];
+  knowledge_guids: string[];
 }
 
-export interface WorkerTool {
-  ToolID: string;
-  ToolName: string;
+export interface Paged<T> {
+  items: T[];
+  total_count?: number;
+  page?: number;
+  page_size?: number;
+  status_counts?: Record<string, number>;
 }
 
-export interface WorkflowReportInstance {
-  instanceid: string;
-  workflow_short_name: string;
-  doozer_name: string;
-  duration_seconds: number | null;
-  status: string;
-  _ts: number;
-  createddate: string;
-  enddate: string | null;
-}
-
-export interface WorkflowDefinition {
-  id: string;
-  short_name: string;
+export interface WorkflowSummary {
+  workflow_guid: string;
   workflow_name: string;
-  description: string;
-  worker_id: string;
+  description: string | null;
   version: number;
+  step_count?: number;
+  updated_at?: string;
 }
 
-export interface WorkflowInstanceDetail {
+/** Item from GET /tenants/{t}/workflow-instances (fields=summary). */
+export interface WorkflowInstanceSummary {
   id: string;
+  workflow_guid: string;
   workflow_short_name: string;
-  workflow_name: string;
-  doozer_name: string;
+  worker_guid: string | null;
   status: string;
   start_date: string;
   end_date: string | null;
   duration_seconds: number | null;
-  current_step_id: string;
-  completed_steps: string[];
-  active_steps: string[];
-  initial_variables: Record<string, unknown>;
-  data_dictinary: Record<string, unknown>;
-  execution_steps: ExecutionStep[];
-  costs: WorkflowCosts | null;
+  created_at: string;
   error_message: string | null;
-  error_step_id: string | null;
-  final_output: string | null;
-  initiation_context: Record<string, unknown> | null;
+  /** Present only with fields=full */
+  data_dictionary?: Record<string, unknown>;
+  final_output?: unknown;
 }
 
-export interface ExecutionStep {
-  step_details: {
-    step_id: string;
-    step_name: string;
-    type: string;
-    next_step: string | string[];
-    guid: string;
-  };
-  output_value: unknown;
+export interface InstanceStepCosts {
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  cost?: number;
+  model?: string;
+}
+
+export interface InstanceStep {
+  sequence: number;
+  step_id: string;
+  step_name: string;
+  status: string;
   start_time: string;
   end_time: string | null;
-  duration_seconds: number | null;
+  result?: { output?: unknown } | null;
+  costs?: InstanceStepCosts | null;
+  warnings?: unknown[];
+}
+
+export interface WorkflowInstanceDetail {
+  id: string;
+  workflow_guid: string;
+  workflow_short_name: string;
   status: string;
-  costs: StepCosts | null;
-}
-
-export interface StepCosts {
-  prompt_tokens: number;
-  completion_tokens: number;
-  cost: number;
-}
-
-export interface WorkflowCosts {
-  prompt_tokens: number;
-  completion_tokens: number;
-  total_cost: number;
+  start_date: string;
+  end_date: string | null;
+  duration_seconds: number | null;
+  data_dictionary: Record<string, unknown>;
+  /** string from LLM paths, dict/list from HTTP paths — parse tolerantly */
+  final_output: unknown;
+  error_message?: string | null;
+  failed_step_id?: string | null;
+  failed_step_name?: string | null;
+  cumulative_tokens?: number;
+  cumulative_cost_usd?: number;
+  steps?: InstanceStep[];
 }
 
 export interface CertificateSubmission {

@@ -2,15 +2,15 @@ import { useState, useMemo } from 'react';
 import { ArrowUpDown } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
-import type { WorkflowReportInstance } from '../../api/types';
+import type { WorkflowInstanceSummary } from '../../api/types';
 import { formatDuration, truncateId, timeAgo } from '../../lib/utils';
 
 interface RecentExecutionsProps {
-  instances: WorkflowReportInstance[];
+  instances: WorkflowInstanceSummary[];
   isLoading: boolean;
 }
 
-type SortKey = 'workflow_short_name' | 'status' | 'duration_seconds' | 'createddate';
+type SortKey = 'workflow_short_name' | 'status' | 'duration_seconds' | 'start_date';
 type SortDir = 'asc' | 'desc';
 
 const PAGE_SIZE = 15;
@@ -19,7 +19,7 @@ export function RecentExecutions({
   instances,
   isLoading,
 }: RecentExecutionsProps) {
-  const [sortKey, setSortKey] = useState<SortKey>('createddate');
+  const [sortKey, setSortKey] = useState<SortKey>('start_date');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [page, setPage] = useState(0);
 
@@ -37,8 +37,8 @@ export function RecentExecutions({
         case 'duration_seconds':
           cmp = (a.duration_seconds ?? 0) - (b.duration_seconds ?? 0);
           break;
-        case 'createddate':
-          cmp = (a.createddate ?? '').localeCompare(b.createddate ?? '');
+        case 'start_date':
+          cmp = (a.start_date ?? '').localeCompare(b.start_date ?? '');
           break;
       }
       return sortDir === 'asc' ? cmp : -cmp;
@@ -97,7 +97,7 @@ export function RecentExecutions({
                     {headerBtn('Duration', 'duration_seconds')}
                   </th>
                   <th className="pb-3 pr-4">
-                    {headerBtn('Started', 'createddate')}
+                    {headerBtn('Started', 'start_date')}
                   </th>
                   <th className="pb-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     Instance ID
@@ -107,7 +107,7 @@ export function RecentExecutions({
               <tbody>
                 {paged.map((inst) => (
                   <tr
-                    key={inst.instanceid}
+                    key={inst.id}
                     className="border-b border-gray-100 hover:bg-gray-50 dark:border-gray-700/50 dark:hover:bg-gray-700/30"
                   >
                     <td className="py-3 pr-4 font-medium text-gray-900 dark:text-white">
@@ -120,10 +120,10 @@ export function RecentExecutions({
                       {formatDuration(inst.duration_seconds)}
                     </td>
                     <td className="py-3 pr-4 text-gray-500 dark:text-gray-400">
-                      {timeAgo(inst.createddate)}
+                      {timeAgo(inst.start_date)}
                     </td>
                     <td className="py-3 font-mono text-xs text-gray-400">
-                      {truncateId(inst.instanceid, 12)}
+                      {truncateId(inst.id, 12)}
                     </td>
                   </tr>
                 ))}

@@ -1,16 +1,31 @@
-import type { TenantConfig } from './types';
-
-const API_BASE_URL = 'https://api.doozerai.com/v3';
+import type { Paged, TenantConfig } from './types';
 
 export class ApiError extends Error {
   status: number;
-  body: string;
+  /** Platform error type from the {error, detail, correlation_id} envelope */
+  errorType: string | null;
+  detail: string | null;
+  correlationId: string | null;
 
   constructor(status: number, body: string) {
-    super(`API Error ${status}: ${body}`);
+    let errorType: string | null = null;
+    let detail: string | null = null;
+    let correlationId: string | null = null;
+    try {
+      const parsed = JSON.parse(body);
+      errorType = typeof parsed.error === 'string' ? parsed.error : null;
+      detail = typeof parsed.detail === 'string' ? parsed.detail : null;
+      correlationId =
+        typeof parsed.correlation_id === 'string' ? parsed.correlation_id : null;
+    } catch {
+      // non-JSON body — keep raw text in the message
+    }
+    super(`API Error ${status}: ${detail ?? errorType ?? body}`);
     this.name = 'ApiError';
     this.status = status;
-    this.body = body;
+    this.errorType = errorType;
+    this.detail = detail;
+    this.correlationId = correlationId;
   }
 }
 
@@ -25,10 +40,12 @@ class ApiClient {
     return this.tenant;
   }
 
+  /** GET a tenant-scoped path, e.g. get('/workers/abc'). */
   async get<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
     if (!this.tenant) throw new Error('No tenant configured');
 
-    const url = new URL(`${API_BASE_URL}${endpoint}`);
+    const base = this.tenant.apiBaseUrl.replace(/\/$/, '');
+    const url = new URL(`${base}/tenants/${this.tenant.tenantGuid}${endpoint}`);
     if (params) {
       Object.entries(params).forEach(([k, v]) => {
         if (v !== undefined && v !== '') {
@@ -39,9 +56,7 @@ class ApiClient {
 
     const response = await fetch(url.toString(), {
       headers: {
-        'API_KEY': this.tenant.apiKey,
-        'Ocp-Apim-Subscription-Key': this.tenant.subscriptionKey,
-        'Content-Type': 'application/json',
+        'X-Api-Key': this.tenant.apiKey,
       },
     });
 
@@ -50,6 +65,31 @@ class ApiClient {
     }
 
     return response.json();
+  }
+
+  /**
+   * Fetch every page of a paged list endpoint. We ask for 250 but
+   * workflow-instances clamps page_size to 100 (observed on dev), so the
+   * loop trusts the server's returned counts. maxPages is a runaway guard.
+   */
+  async getAllPages<T>(
+    endpoint: string,
+    params: Record<string, string> = {},
+    maxPages = 20,
+  ): Promise<T[]> {
+    const items: T[] = [];
+    for (let page = 1; page <= maxPages; page++) {
+      const data = await this.get<Paged<T>>(endpoint, {
+        ...params,
+        page: String(page),
+        page_size: '250',
+      });
+      const pageItems = Array.isArray(data) ? (data as T[]) : (data.items ?? []);
+      items.push(...pageItems);
+      const total = Array.isArray(data) ? pageItems.length : (data.total_count ?? 0);
+      if (items.length >= total || pageItems.length === 0) break;
+    }
+    return items;
   }
 }
 

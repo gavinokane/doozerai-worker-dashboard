@@ -24,24 +24,34 @@ export function WorkerInfoCard({ worker, isLoading }: WorkerInfoCardProps) {
 
   if (!worker) return null;
 
+  const toolCount = worker.tool_guids?.length ?? 0;
+
   return (
     <Card>
       <div className="flex items-center gap-4">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-xl font-bold text-white">
-          {worker.Name?.charAt(0) ?? '?'}
-        </div>
+        {worker.picture ? (
+          <img
+            src={worker.picture}
+            alt={worker.name}
+            className="h-16 w-16 rounded-full object-cover"
+          />
+        ) : (
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-xl font-bold text-white">
+            {worker.name?.charAt(0) ?? '?'}
+          </div>
+        )}
         <div>
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-            {worker.Name}
+            {worker.name}
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            {worker.Role ?? 'Worker'}
+            {worker.role ?? 'Worker'}
           </p>
           <div className="mt-1 flex items-center gap-2">
-            <Badge status={worker.HireStatus?.toLowerCase() ?? 'unknown'} />
-            {worker.tools?.length > 0 && (
+            <Badge status={worker.hire_status?.toLowerCase() ?? 'unknown'} />
+            {toolCount > 0 && (
               <span className="text-xs text-gray-400">
-                {worker.tools.length} tool{worker.tools.length !== 1 ? 's' : ''}
+                {toolCount} tool{toolCount !== 1 ? 's' : ''}
               </span>
             )}
           </div>

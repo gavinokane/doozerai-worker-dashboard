@@ -7,9 +7,9 @@ export function useWorker() {
   const { activeTenant } = useTenant();
 
   return useQuery({
-    queryKey: ['worker', activeTenant?.id, activeTenant?.workerId],
+    queryKey: ['worker', activeTenant?.id, activeTenant?.workerGuid],
     queryFn: () =>
-      apiClient.get<Worker>(`/worker/${activeTenant!.workerId}`),
+      apiClient.get<Worker>(`/workers/${activeTenant!.workerGuid}`),
     enabled: !!activeTenant,
     staleTime: 5 * 60 * 1000,
   });

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../client';
-import type { WorkflowDefinition } from '../types';
+import type { WorkflowSummary } from '../types';
 import { useTenant } from '../../context/TenantContext';
 
 export function useWorkflowList() {
@@ -8,8 +8,7 @@ export function useWorkflowList() {
 
   return useQuery({
     queryKey: ['workflow-list', activeTenant?.id],
-    queryFn: () =>
-      apiClient.get<WorkflowDefinition[]>('/workflow/list'),
+    queryFn: () => apiClient.getAllPages<WorkflowSummary>('/workflows'),
     enabled: !!activeTenant,
     staleTime: 5 * 60 * 1000,
   });

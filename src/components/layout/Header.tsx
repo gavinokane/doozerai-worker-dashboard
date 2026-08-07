@@ -108,7 +108,7 @@ export function Header({
                 >
                   {t.displayName}
                   <span className="ml-1 text-xs text-gray-400">
-                    (Worker {t.workerId})
+                    ({t.workerGuid.slice(0, 8)})
                   </span>
                 </button>
               ))}

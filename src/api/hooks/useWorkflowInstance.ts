@@ -9,9 +9,10 @@ export function useWorkflowInstance(instanceId: string | null) {
   return useQuery({
     queryKey: ['workflow-instance', activeTenant?.id, instanceId],
     queryFn: () =>
-      apiClient.get<WorkflowInstanceDetail>('/workflow/instance', {
-        instance_id: instanceId!,
-      }),
+      apiClient.get<WorkflowInstanceDetail>(
+        `/workflows/instances/${instanceId!}`,
+        { steps: 'full' },
+      ),
     enabled: !!activeTenant && !!instanceId,
     staleTime: 60 * 1000,
   });

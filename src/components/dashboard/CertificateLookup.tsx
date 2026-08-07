@@ -10,7 +10,7 @@ interface CertificateLookupProps {
 }
 
 export function CertificateLookup({ dateRange }: CertificateLookupProps) {
-  const { submissions, isLoading, totalInstances, loadedInstances } =
+  const { submissions, isLoading, workflowFound } =
     useCertificateInstances(dateRange);
   const [search, setSearch] = useState('');
 
@@ -25,8 +25,6 @@ export function CertificateLookup({ dateRange }: CertificateLookupProps) {
         s.exactAddress.toLowerCase().includes(q),
     );
   }, [submissions, search]);
-
-  const loading = isLoading || loadedInstances < totalInstances;
 
   return (
     <Card title="Certificate Submissions">
@@ -44,14 +42,19 @@ export function CertificateLookup({ dateRange }: CertificateLookupProps) {
             className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
           />
         </div>
-        {loading && (
-          <span className="text-xs text-gray-400">
-            Loading {loadedInstances}/{totalInstances}...
-          </span>
+        {isLoading && (
+          <span className="text-xs text-gray-400">Loading...</span>
         )}
       </div>
 
-      {isLoading ? (
+      {!workflowFound ? (
+        <div className="flex flex-col items-center py-8 text-gray-400">
+          <FileText size={32} className="mb-2" />
+          <p className="text-sm">
+            Workflow &quot;Certificate Submit v2&quot; not found on this tenant
+          </p>
+        </div>
+      ) : isLoading ? (
         <div className="animate-pulse space-y-3">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="h-10 rounded bg-gray-200 dark:bg-gray-700" />

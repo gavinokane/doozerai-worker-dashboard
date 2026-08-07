@@ -28,12 +28,12 @@ export function Sidebar() {
         <div className="border-t border-white/10 p-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-bold">
-              {worker.Name?.charAt(0) ?? '?'}
+              {worker.name?.charAt(0) ?? '?'}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium">{worker.Name}</p>
+              <p className="truncate text-sm font-medium">{worker.name}</p>
               <p className="truncate text-xs text-gray-400">
-                {worker.Role ?? 'Worker'}
+                {worker.role ?? 'Worker'}
               </p>
             </div>
           </div>

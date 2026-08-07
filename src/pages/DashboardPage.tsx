@@ -10,7 +10,7 @@ import { ErrorSummary } from '../components/dashboard/ErrorSummary';
 import { RecentExecutions } from '../components/dashboard/RecentExecutions';
 import { CertificateLookup } from '../components/dashboard/CertificateLookup';
 import { useWorker } from '../api/hooks/useWorker';
-import { useWorkflowReport } from '../api/hooks/useWorkflowReport';
+import { useWorkflowInstances } from '../api/hooks/useWorkflowInstances';
 import {
   computeMetrics,
   computeVolumeData,
@@ -18,7 +18,8 @@ import {
   computeDistributionData,
 } from '../lib/utils';
 import { useTenant } from '../context/TenantContext';
-import { Spinner } from '../components/ui/Spinner';
+import { isUsableTenant } from '../lib/utils';
+import { TenantSetup } from '../components/setup/TenantSetup';
 
 export function DashboardPage() {
   const { activeTenant } = useTenant();
@@ -27,7 +28,7 @@ export function DashboardPage() {
   });
 
   const workerQuery = useWorker();
-  const reportQuery = useWorkflowReport(dateRange);
+  const reportQuery = useWorkflowInstances(dateRange);
 
   function handleDateRangeChange(value: string) {
     setDateRange(value);
@@ -54,8 +55,8 @@ export function DashboardPage() {
   const errors = useMemo(
     () =>
       instances
-        .filter((i) => i.status === 'error')
-        .sort((a, b) => (b.createddate ?? '').localeCompare(a.createddate ?? '')),
+        .filter((i) => i.status === 'failed')
+        .sort((a, b) => (b.start_date ?? '').localeCompare(a.start_date ?? '')),
     [instances],
   );
 
@@ -63,15 +64,8 @@ export function DashboardPage() {
     ? new Date(reportQuery.dataUpdatedAt)
     : null;
 
-  if (!activeTenant) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <Spinner size="lg" className="mx-auto" />
-          <p className="mt-4 text-gray-500">Loading tenant configuration...</p>
-        </div>
-      </div>
-    );
+  if (!isUsableTenant(activeTenant)) {
+    return <TenantSetup />;
   }
 
   return (

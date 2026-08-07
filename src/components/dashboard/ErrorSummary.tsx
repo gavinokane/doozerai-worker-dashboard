@@ -1,10 +1,10 @@
 import { AlertCircle } from 'lucide-react';
 import { Card } from '../ui/Card';
-import type { WorkflowReportInstance } from '../../api/types';
+import type { WorkflowInstanceSummary } from '../../api/types';
 import { timeAgo, formatDuration } from '../../lib/utils';
 
 interface ErrorSummaryProps {
-  errors: WorkflowReportInstance[];
+  errors: WorkflowInstanceSummary[];
   isLoading: boolean;
 }
 
@@ -26,7 +26,7 @@ export function ErrorSummary({ errors, isLoading }: ErrorSummaryProps) {
         <div className="space-y-2">
           {errors.slice(0, 10).map((err) => (
             <div
-              key={err.instanceid}
+              key={err.id}
               className="flex items-center gap-3 rounded-lg border-l-4 border-red-500 bg-red-50 px-4 py-3 dark:bg-red-900/10"
             >
               <AlertCircle size={16} className="shrink-0 text-red-500" />
@@ -35,9 +35,14 @@ export function ErrorSummary({ errors, isLoading }: ErrorSummaryProps) {
                   {err.workflow_short_name ?? 'Unknown'}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {timeAgo(err.createddate)} &middot;{' '}
+                  {timeAgo(err.start_date)} &middot;{' '}
                   {formatDuration(err.duration_seconds)}
                 </p>
+                {err.error_message && (
+                  <p className="mt-0.5 truncate text-xs text-red-600 dark:text-red-400">
+                    {err.error_message}
+                  </p>
+                )}
               </div>
             </div>
           ))}

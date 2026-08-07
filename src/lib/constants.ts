@@ -10,28 +10,29 @@ export const DATE_RANGE_OPTIONS = [
   { label: 'This Month', value: 'this month' },
 ] as const;
 
+// Instance statuses — non-terminal: queued | running | paused | awaiting_child;
+// terminal: complete | failed | stopped (exactly these strings).
 export const STATUS_COLORS: Record<string, string> = {
   complete: '#22c55e',
-  error: '#ef4444',
+  failed: '#ef4444',
   running: '#3b82f6',
-  starting: '#8b5cf6',
-  waiting: '#f59e0b',
-  terminated: '#6b7280',
+  queued: '#8b5cf6',
+  paused: '#f59e0b',
+  awaiting_child: '#06b6d4',
+  stopped: '#6b7280',
 };
 
 export const STATUS_BG_COLORS: Record<string, string> = {
   complete: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  error: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+  failed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
   running: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-  starting: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-400',
-  waiting: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
-  terminated: 'bg-gray-100 text-gray-800 dark:bg-gray-700/30 dark:text-gray-400',
+  queued: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-400',
+  paused: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+  awaiting_child:
+    'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400',
+  stopped: 'bg-gray-100 text-gray-800 dark:bg-gray-700/30 dark:text-gray-400',
 };
 
-export const DEFAULT_TENANT = {
-  id: 'legendary-plumbing-default',
-  displayName: 'Legendary Plumbing',
-  apiKey: '7b5b51b4c958492e91d3c5572c86ce38',
-  subscriptionKey: '741b40213d07416383224a172da313ba',
-  workerId: 215,
-};
+export const RUNNING_STATUSES = ['queued', 'running', 'paused', 'awaiting_child'];
+
+export const CERT_WORKFLOW_NAME = 'Certificate Submit v2';
