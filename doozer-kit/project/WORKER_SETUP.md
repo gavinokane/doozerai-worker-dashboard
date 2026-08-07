@@ -17,11 +17,13 @@
 - [ ] **CORS**: the dashboard origin must be in the `CORS_ALLOWED_ORIGINS`
       app setting on the **api** function app (declared in the platform's
       function-app bicep — never `az functionapp cors` / portal CORS,
-      platform/05_GOTCHAS.md #6). Status on dev, checked 2026-08-07:
+      platform/05_GOTCHAS.md #6). Status on dev, 2026-08-07:
       - `http://localhost:5173` — ✅ allowed
       - `https://agreeable-hill-09a0def1e.2.azurestaticapps.net` —
-        ❌ **not allowed yet** — the deployed dashboard cannot call the dev
-        API until this is added (platform repo change).
+        ✅ allowed (added 2026-08-07 as an app-setting stopgap via
+        `az functionapp config appsettings set`; **<TODO: mirror into the
+        function-app bicep in the platform repo — until then an infra
+        deploy can revert it>**).
       The stream app is irrelevant here (no chat surface).
 - [ ] The workflows the dashboard reports on actually run on this tenant
       (see [WORKFLOWS.md](WORKFLOWS.md)); `Certificate Submit v2` must keep
